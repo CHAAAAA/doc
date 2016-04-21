@@ -1,0 +1,223 @@
+技术实现
+=======================
+
+概述
+--------------------
+
+一卡通在线充值由 wechat-portal (企业号) 中的 wapp-schoolcard 和 wapp-schoolcard-datalook 两个插件具体实现，同时需要 wechat-portal 中的 wapp-wepay 插件和 wepay (校园网在线支付) 系统提供支持，其使用的支付方式为 H5 支付，即通过页面的 JS 调用来实现。
+
+* wapp-schoolcard 和 wapp-schoolcard-datalook 两个插件必须配合使用。wapp-schoolcard 提供了企业号中一卡通应用的前端逻辑； wapp-schoolcard-datalook 提供了一卡通相应接口的实现，实际上 wapp-schoolcard-datalook 只提供了一个 service ，该 service 的名称必须为 ``WappSchoolCardService`` ，也就是当更换一卡通接口时只需要更换该插件。
+
+* wapp-wepay 插件是 wechat-portal 中实现 H5 支付的核心插件，提供了 H5 支付的下单、支付、管理的实现。
+
+基本流程
+--------------------
+
+用户通过企业号完成一卡通在线充值的基本流程如下：
+
+* 用户通过 wapp-schoolcard 插件提供的一卡通充值页面完成下单，下单过程中调用 wapp-wepay 提供的下单接口， wapp-wepay 的下单接口实际上是调用了 wepay 系统的统一下单接口，所有校内在线支付的下单都需要通过该接口。
+
+* 下单后，用户的页面跳转到 wapp-wepay 的微信支付页面，在该页面中用户完成支付操作。该页面的支付方式为调用微信提供的 JS 下单接口。
+
+* 用户支付成功后 wepay 系统会接收到微信发送的确认消息，wepay 会根据消息体向消息队列发送支付成功的消息。
+
+* H5 支付方式的消息由 wapp-wepay 来接收，消息接收后更新订单的支付状态，并调用 ``SchoolCardWechatWepayTenant`` 完成一卡通充值。
+
+下图描述了一卡通充值过程的实现
+
+.. image:: image/flow.png
+
+
+实现细节
+----------------
+
+.. _wechat-wepay-tenant-label:
+
+``SchoolCardWechatWepayTenant`` 类
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+实现 H5 支付的插件需要实现一个以 ``WechatWepayTenant`` 结尾的类，且需要实现一个名为 ``orderPaidConfirm`` 的方法，wapp-schoolcard 实现的类为 ``SchoolCardWechatWepayTenant`` ，其目录结构为 ``wechat/wapp/schoolcard/`` ，该类的 ``orderPaidConfirm`` 方法用于实现支付成功后的一卡通充值操作。
+
+
+``CardServiceProvider`` 接口
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``CardServiceProvider`` 接口由 wapp-schoolcard 提供，该接口设计了系统与第三方一卡通系统对接时需要提供的方法，具体实现如下::
+
+	interface CardServiceProvider {
+
+	    /**
+	     * 获取验证时需要的额外参数,在绑定校园卡时会附上该参数
+	     * @return map ['身份证件号'(页面显示参数名称):'idcard'(参数名称)]  except[name,code]
+	     * 若无 [:]
+	     */
+	    def requiredParams();
+
+	    /**
+	     * 验证一卡通信息并绑定
+	     * @param map [name:'',code:'',password:'' requiredParams]  (e.g. [name:'',code:'', password:'',idcard:""])
+	     * @return Success [errcode:0,userid:'', info: [MAP]]  (info 会在页面显示key/value)
+	     * Failed [errcode: 1, errmsg: result.errmsg]
+	     */
+	    def bindCard(Map map);
+
+	    /**
+	     * 查询一卡通基本信息
+	     * @param Long id
+	     * @return Success [errcode:0, info: ['余额':12,....]]
+	     * Failed [errcode: 1, errmsg: result.errmsg]
+	     */
+	    def cardInfo(Long id);
+
+	    /**
+	     * 查询交易记录
+	     * @param map [cardid:1,datestart:Date,dateend:Date,maxcount:10]
+	     * @return Success [errcode:0, tradelist:[['交易地点':'一食堂', ...], ...]]
+	     * Failed [errcode: 1, errmsg: result.errmsg]
+	     */
+	    def queryTradeList(Map map);
+
+	    /**
+	     * 一卡通挂失
+	     * @param [cardid :1,password:'pwd']
+	     * @return Success [errcode:0]
+	     * Failed [errcode: 1, errmsg: result.errmsg]
+	     */
+	    def cardReportLoss(Map map);
+
+	    /**
+	     * 一卡通充值
+	     * @param [cardid : '卡id',txamt: '金额(分)',businessno: '订单号',
+	     * txdate: '订单创建时间',paydate: '订单支付时间']
+	     * @return
+	     */
+	    def cardRecharge(Map map);
+	}
+
+wapp-schoolcard-datalook 的实现
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+wapp-schoolcard-datalook 插件是与一卡通系统对接的具体实现，该插件只需实现 ``WappSchoolCardService`` ，该 service 需要实现 wapp-schoolcard 提供的 ``CardServiceProvider`` 接口。
+该插件的设计主要考虑系统解耦，当更换一卡通供应商时，只需要再实现一个名为 wapp-schoolcard-xxx 的插件替换掉原来的插件即可。需要注意的是 ``WappSchoolCardService`` 的名字是固定的，否则 wapp-schoolcard 将无法调用到该 service。
+
+一卡通在线充值下单参数
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+用户提交订单时提供了三个参数,如下表:
+
+================= ============= =========================================================================================================
+ 参数名称           参数类型       参数描述
+================= ============= =========================================================================================================
+ card              Long          用户充值的卡片id
+ totalFee          Long          用户的充值金额（单位：分）,该参数为用户通过下拉列表选择的金额
+ inputFee          Long          用户的充值金额（单位：分）,该参数为用户手工输入的金额，且该参数和 totalFee 只能有一个不为 null
+================= ============= =========================================================================================================
+
+用户提交订单后, 调用 wapp-wepay 的 ``wepayService.createOrder`` 方法, 其参数如下:
+
+=============== ============================================= ===================================================================
+参数名称           值                                            参数描述
+=============== ============================================= ===================================================================
+tenantClass      SchoolCardWechatWepayTenant.class              此为 wapp-schoolcard 实现的类,见 :ref:`wechat-wepay-tenant-label`
+follower         f(当前关注者)                                   当前进行充值操作的 follower 对象
+totalFee         totalFee（用户提交的充值金额，单位：分）           充值金额
+productBody       '一卡通充值'                                    给用户显示的商品名称
+orderParams         {"cardid":long}                              充值参数，主要用于充值成功后调用一卡通充值接口
+=============== ============================================= ===================================================================
+
+该方法将返回 wapp-wepay 的 ``WappWepayOrder`` 对象, 根据该对象的参数完成支付页面的跳转,如下 ::
+
+ redirect(base: grailsApplication.config.grails.callbackServerURL, controller: 'wappWepay',
+                        action: "wechatPay", id: order.tradeNumber, params: [showwxpaytitle: '1'])
+
+参数 ``showwxpaytitle`` 用于支付页面的 title 显示"微信安全支付"标志。
+
+微信充值成功的消息确认
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+当用户完成微信在线支付后,微信会给 wepay 系统发送确认消息, wepay 系统接收到消息后会根据支付的类型（JSAPI即H5支付 或者 NATIVE即扫码支付）给不同的消息队列发消息。
+H5 支付方式的消息由 wapp-wepay 的 ``TenantNotifyH5Consumer`` 来接收，当接收到支付成功的消息后再调用 ``wepayService.orderPaidConfirm`` 来保存用户支付状态，
+并调用下单时传入的 ``tenantClass(SchoolCardWechatWepayTenant)`` 的 ``orderPaidConfirm`` 方法来调用一卡通充值接口，完成一卡通充值。
+
+wepay 发送支付成功的消息包含如下信息：
+
+====================== =======================
+参数名称                  参数描述
+====================== =======================
+tenant                  一卡通充值在 wepay 系统里的租户代码
+tenantTradeNumber				租户订单后，下单时由 wapp-wepay 传入
+tradeNumber							微信的订单号
+gatewayTradeNumber			wepay 的订单号
+timeEnd									支付成功时间
+totalFee								支付金额（单位：分）
+timestamp								时间戳
+====================== =======================
+
+``SchoolCardWechatWepayTenant.orderPaidConfirm`` 被调用时传入的参数为 ``WappWepayOrder`` 对象。
+
+对接一卡通在线充值接口
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+迪科提供的一卡通充值接口如下：
+
+ServerUrl: http://yktapi.info.bit.edu.cn/EcardService/services/ICardService
+
+请求方法名：``recharge4CardFromThirdParty``
+
+参数说明:
+
+===============  ============== ============= ============== =============================================
+参数        	参数名称        类型          是否可为空       参数说明
+===============  ============== ============= ============== =============================================
+idserial          学工号          String        不可空          金额为分
+username          姓名            String        不可空          金额为分
+cardid            卡序列号         String        不可空          金额为分
+txamt             充值金额         String        不可空          金额为分
+businessno        业务流水号       String        不可空          金额为分
+tradetype         交易类型         String        不可空          根据各学校来确定
+txdate            交易日期         String        不可空          订单生成时间，格式为: yyyyMMddHHmmss
+paydate           支付日期         String        不可空          订单支付时间，格式为: yyyyMMddHHmmss
+clienttype        客户端类型       String        不可空           T001-微信 T002-手机 APPT003-电脑
+systemversion     系统版本         String        不可空          V001-CS版 V002-BS版
+===============  ============== ============= ============== =============================================
+
+请求报文样例：(BASE64加密，样例为明文)::
+
+    "{"idserial":"1121180709","username":"李小静","cardid":"918545602","txamt":"500","businessno ":"99912323001",
+    "tradetype":"12","txdate":"20141120195104","paydate":"20141120195104","clienttype":"T001","systemversion":"V002"}"
+
+
+响应报文参数说明：
+
+================ ============== ============== ============================================================= ================
+参数               参数名称         类型             参数说明                                                       是否可为空
+================ ============== ============== ============================================================= ================
+returncode        返回码          String          返回结果码取值范围：SUCCESS(处理成功);ERROR(系统异常)                 不可空
+returnms          返回信息         String         描述处理情况                                                      可空
+================ ============== ============== ============================================================= ================
+
+一卡通系统在线充值内部实现
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+数据表说明：
+
+* ``third_pay_trade`` 表用于记录用户的一卡通在线充值流水，也就是当我们调用一卡通充值接口后会在该表新增一条记录，该表的 ``recflag`` 字段表示用户是否已经领取，``recflag=0`` 表示未领取，``recflag=1`` 表示已领取，该表中还包含证件号、金额、时间等信息。
+
+* ``trjn`` 表用于记录一卡通用户交易的流水，当用户领取在线充值金额时也会产生一条交易流水。
+
+* ``User_Master`` 表描述用户的一卡通账户，该表中金额字段是 ``CDBalance`` 和 ``JBalance``， 分别表示库金额和卡金额。
+
+	* 卡金额表示用户当前一卡通账户金额(不包含未领取金额)，该值根据该用户最后一条上传的 ``trjn`` 流水计算得出，即流水里记录的卡余额（卡上实际的钱）与交易金额的和。
+	* 库金额则表示卡金额与未领取金额的和，该字段的值是该用户所有流水交易金额的累加值，包含 ``third_pay_trade`` 表和 ``trjn`` 表的流水。
+	
+一卡通系统内部变动：
+
+* 当用户在线充值成功后，``third_pay_trade`` 表会新增一条记录，记录该次交易的流水，同时 ``User_Master`` 表的 ``CDBalance`` 字段也会累加，记录用户当前的库金额。
+  
+* 当用户完成金额领取后，``trjn`` 表生成用户领取金额的交易记录，``third_pay_trade`` 表的 ``recflag`` 字段置为 ``1`` ，然后更新 ``User_Master`` 表的 ``JBalance`` 字段。此时 ``CDBalance`` 字段的值应与 ``JBalance`` 字段的值一致。
+   
+* 如果用户多次充值后再去领取，``trjn`` 表也会对应产生多条记录。
+
+
+
+
