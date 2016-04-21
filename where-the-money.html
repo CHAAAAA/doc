@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>一卡通在线充值 &mdash; 一卡通在线充值 0.0.1 documentation</title>
+  <title>3. 充值金额流转说明 &mdash; 一卡通在线充值 0.0.1 documentation</title>
   
 
   
@@ -30,8 +30,9 @@
   
 
   
-    <link rel="top" title="一卡通在线充值 0.0.1 documentation" href="#"/>
-        <link rel="next" title="1. 简介" href="introduction.html"/> 
+    <link rel="top" title="一卡通在线充值 0.0.1 documentation" href="index.html"/>
+        <link rel="next" title="4. 技术实现" href="implementation.html"/>
+        <link rel="prev" title="2. 用户使用说明" href="how-to-use.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -49,7 +50,7 @@
           
 
           
-            <a href="#" class="icon icon-home"> 一卡通在线充值
+            <a href="index.html" class="icon icon-home"> 一卡通在线充值
           
 
           
@@ -80,10 +81,10 @@
           
             
             
-                <ul>
+                <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="introduction.html">1. 简介</a></li>
 <li class="toctree-l1"><a class="reference internal" href="how-to-use.html">2. 用户使用说明</a></li>
-<li class="toctree-l1"><a class="reference internal" href="where-the-money.html">3. 充值金额流转说明</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">3. 充值金额流转说明</a></li>
 <li class="toctree-l1"><a class="reference internal" href="implementation.html">4. 技术实现</a></li>
 </ul>
 
@@ -98,7 +99,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="#">一卡通在线充值</a>
+        <a href="index.html">一卡通在线充值</a>
       </nav>
 
 
@@ -113,13 +114,13 @@
 
 <div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
-    <li><a href="#">Docs</a> &raquo;</li>
+    <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>一卡通在线充值</li>
+    <li>3. 充值金额流转说明</li>
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="_sources/index.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/where-the-money.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -130,29 +131,16 @@
            <div itemprop="articleBody">
             
   <div class="section" id="id1">
-<h1>一卡通在线充值<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h1>
-<p>Contents:</p>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="introduction.html">1. 简介</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="introduction.html#id2">1.1. 简介</a></li>
-<li class="toctree-l2"><a class="reference internal" href="introduction.html#id3">1.2. 相关系统说明</a></li>
+<h1>3. 充值金额流转说明<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h1>
+<p>一卡通用户使用在线充值其金额的流转如下：</p>
+<ul class="simple">
+<li>用户在企业号中完成充值，此时充值金额从用户账户充入《商户后台》，《支付平台》会记录每笔充值的交易详情。</li>
+<li>用户在线充值完成的同时《企业号》会调用一卡通充值接口，用户的充值金额会记录在一卡通系统中，但此时未充入用户一卡通账户。</li>
+<li>《商户后台》每天会与我校的银行账户结算，需要注意的是银行对账单显示的日期总是比《支付平台》显示的日期晚一天。结算后，通过微信支付完成的一卡通交易金额转入我校银行账户。</li>
+<li>财务处会定期处理来自该银行账户的流水，处理方式为根据《支付平台》的支付项目分类统计，给各个部门转账对应金额。</li>
 </ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="how-to-use.html">2. 用户使用说明</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="how-to-use.html#id2">2.1. 一卡通用户</a></li>
-<li class="toctree-l2"><a class="reference internal" href="how-to-use.html#id3">2.2. 系统管理者</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="where-the-money.html">3. 充值金额流转说明</a></li>
-<li class="toctree-l1"><a class="reference internal" href="implementation.html">4. 技术实现</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="implementation.html#id2">4.1. 概述</a></li>
-<li class="toctree-l2"><a class="reference internal" href="implementation.html#id3">4.2. 基本流程</a></li>
-<li class="toctree-l2"><a class="reference internal" href="implementation.html#id4">4.3. 实现细节</a></li>
-</ul>
-</li>
-</ul>
-</div>
+<p>下图展示了一卡通在线充值的整个过程。</p>
+<img alt="_images/manual.png" src="_images/manual.png" />
 </div>
 
 
@@ -162,8 +150,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="introduction.html" class="btn btn-neutral float-right" title="1. 简介" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="implementation.html" class="btn btn-neutral float-right" title="4. 技术实现" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
+      
+        <a href="how-to-use.html" class="btn btn-neutral" title="2. 用户使用说明" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
