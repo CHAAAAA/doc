@@ -185,31 +185,34 @@
 
     /**
      * 验证一卡通信息并绑定
-     * @param map [name:&#39;&#39;,code:&#39;&#39;,password:&#39;&#39; requiredParams]  (e.g. [name:&#39;&#39;,code:&#39;&#39;, password:&#39;&#39;,idcard:&quot;&quot;])
-     * @return Success [errcode:0,userid:&#39;&#39;, info: [MAP]]  (info 会在页面显示key/value)
+     * @param map [name:&#39;姓名&#39;,code:&#39;学工号&#39;,password:&#39;密码&#39; requiredParams]  (e.g. [name:&#39;&#39;,code:&#39;&#39;, password:&#39;&#39;,idcard:&quot;&quot;])
+     * @return Success [errcode:0,userid:&#39;一卡通系统中的用户标示&#39;, info: [MAP]]  (info 用户的附加信息 暂无使用)
      * Failed [errcode: 1, errmsg: result.errmsg]
      */
     def bindCard(Map map);
 
     /**
      * 查询一卡通基本信息
-     * @param Long id
-     * @return Success [errcode:0, info: [&#39;余额&#39;:12,....]]
+     * @param Long id (WappSchoolCard.id)
+     * @return Success [errcode:0, info: [&#39;余额&#39;:12,....]] (info 为开发者在开发中自定义需要显示的字段)
      * Failed [errcode: 1, errmsg: result.errmsg]
      */
     def cardInfo(Long id);
 
     /**
      * 查询交易记录
-     * @param map [cardid:1,datestart:Date,dateend:Date,maxcount:10]
-     * @return Success [errcode:0, tradelist:[[&#39;交易地点&#39;:&#39;一食堂&#39;, ...], ...]]
+     * @param map [cardid:1,datestart:Date,dateend:Date,offset:0,limit:10]    (cardid 为 WappSchoolCard的id , limit 为单页显示最大记录数, offset 为偏移量)
+     * @return Success [errcode:0, tradelist:[
+     *                                          [&#39;地点&#39;:&#39;一食堂&#39;,&#39;交易类型&#39;:&#39;消费/转账/...&#39;,&#39;金额&#39;:&#39;12(单位元)&#39;,...],
+     *                                             ...
+     *                                       ]]  (&#39;地点&#39;和&#39;交易类型&#39;这两个key是固定的,在页面显示需要用到,其他的key可以自定义)
      * Failed [errcode: 1, errmsg: result.errmsg]
      */
     def queryTradeList(Map map);
 
     /**
      * 一卡通挂失
-     * @param [cardid :1,password:&#39;pwd&#39;]
+     * @param [cardid :1,password:&#39;卡密码&#39;]  (cardid 为 WappSchoolCard的id)
      * @return Success [errcode:0]
      * Failed [errcode: 1, errmsg: result.errmsg]
      */
@@ -218,10 +221,18 @@
     /**
      * 一卡通充值
      * @param [cardid : &#39;卡id&#39;,txamt: &#39;金额(分)&#39;,businessno: &#39;订单号&#39;,
-     * txdate: &#39;订单创建时间&#39;,paydate: &#39;订单支付时间&#39;]
+     * txdate: &#39;订单创建时间&#39;,paydate: &#39;订单支付时间&#39;]   (cardid 为 WappSchoolCard的id)
      * @return
      */
     def cardRecharge(Map map);
+
+    /**
+     * 一卡通余额查询
+     * @param  Long id (WappSchoolCard.id)
+     * @return Success [errcode:0, result:[&#39;余额&#39;:&#39;88.99元&#39;,&#39;待领余额&#39;:&#39;100.00元&#39;...]]
+     *  Failed [errcode: 1, errmsg: result.errmsg]
+     */
+    def cardBalance(Long id);
 }
 </pre></div>
 </div>
@@ -349,7 +360,7 @@ H5 支付方式的消息由 wapp-wepay 的 <code class="docutils literal"><span 
 <div class="section" id="id7">
 <h3>4.3.6. 对接一卡通在线充值接口<a class="headerlink" href="#id7" title="Permalink to this headline">¶</a></h3>
 <p>迪科提供的一卡通充值接口如下：</p>
-<p>ServerUrl: <a class="reference external" href="http://yktapi.info.bit.edu.cn/EcardService/services/ICardService">http://yktapi.info.bit.edu.cn/EcardService/services/ICardService</a></p>
+<p>ServerUrl: &#8220;<strong>*</strong>&#8220;</p>
 <p>请求方法名：<code class="docutils literal"><span class="pre">recharge4CardFromThirdParty</span></code></p>
 <p>参数说明:</p>
 <table border="1" class="docutils">
